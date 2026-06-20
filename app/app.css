@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Lora", "Merriweather", Georgia, serif;
+}
+
+/* Custom Design Tokens */
+:root {
+  --bg-paper: #FAF8F5; /* Warm Sepia Ivory */
+  --bg-card: #F4F1EA; /* Warm Notebook Card */
+  --ink-dark: #1C1C1E; /* Crisp Dark Charcoal */
+  --ink-muted: #57575A; /* Muted Pencil Lead */
+  --accent: #d7ff00; /* Electric Neon Lime */
+  --accent-text: #1C1C1E;
+  
+  --border-pencil: rgba(28, 28, 30, 0.12); /* Thin pencil borderline */
+  --border-pencil-strong: rgba(28, 28, 30, 0.25);
+}
+
+/* Base Editorial Styles */
+html,
+body {
+  background-color: var(--bg-paper);
+  color: var(--ink-dark);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Grid overlay background to simulate paper notebook */
+.notebook-grid {
+  background-image: 
+    radial-gradient(var(--border-pencil) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Serif font style for editorial headers */
+.font-serif-header {
+  font-family: var(--font-serif);
+}
+
+/* Highlighter text sweep */
+.highlight-sweep {
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent) 100%);
+  background-repeat: no-repeat;
+  background-size: 100% 40%;
+  background-position: 0 80%;
+}
+
+/* Sepia Card Layouts */
+.paper-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-pencil);
+  box-shadow: 0 4px 0px rgba(28, 28, 30, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.paper-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 12px rgba(28, 28, 30, 0.06);
+  border-color: var(--border-pencil-strong);
+}
+
+/* Electric Neon buttons */
+.btn-volt {
+  background-color: var(--accent);
+  color: var(--accent-text);
+  border: 1px solid var(--ink-dark);
+  box-shadow: 2px 2px 0px var(--ink-dark);
+  font-weight: 700;
+  transition: all 0.15s ease-in-out;
+}
+
+.btn-volt:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--ink-dark);
+}
+
+.btn-volt:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--ink-dark);
+}
+
+/* Thin outlines */
+.border-pencil-outline {
+  border: 1px solid var(--border-pencil);
+}
+
+/* Micro-interactions */
+.text-link-hover {
+  position: relative;
+}
+
+.text-link-hover::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  transform: scaleX(0);
+  height: 1px;
+  bottom: -1px;
+  left: 0;
+  background-color: var(--ink-dark);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.text-link-hover:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}

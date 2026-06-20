@@ -1,0 +1,37 @@
+name: Deploy docs-hyperrr to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/docs-hyperrr/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: web/docs-hyperrr
+
+      - name: Build React Router
+        run: npm run build
+        working-directory: web/docs-hyperrr
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: docs-hyperrr
+          directory: web/docs-hyperrr/build/client
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
