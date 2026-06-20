@@ -17,15 +17,13 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: web/docs-hyperrr/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: web/docs-hyperrr
 
       - name: Build React Router
         run: npm run build
-        working-directory: web/docs-hyperrr
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -33,5 +31,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: docs-hyperrr
-          directory: web/docs-hyperrr/build/client
+          directory: build/client
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
