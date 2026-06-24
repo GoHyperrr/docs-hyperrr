@@ -148,8 +148,66 @@ const renderMarkdown = (md: string) => {
   return <div className="space-y-1">{blocks}</div>;
 };
 
-// CLEAN SLATE DATABASE STORE: Empty guides
-const guides: Record<string, { title: string; category: string; content: string }> = {};
+// CLEAN SLATE DATABASE STORE: Loaded guides
+const guides: Record<string, { title: string; category: string; content: string }> = {
+  "store-configuration": {
+    title: "Store Settings & Lifecycle",
+    category: "Core Modules",
+    content: `# Store Configuration & Lifecycle Manual
+
+This guide describes how to manage store configurations, setup onboarding, configure sales channels, register custom domains with TXT record validation, and handle store operational states in the Hyperrr core monolith.
+
+## 1. Merchant Onboarding CLI
+
+To initialize a store directly from the command line, run the setup command:
+
+\`\`\`bash
+cargo run -- setup --name "My Store" --email "merchant@example.com" --currency "INR" --timezone "Asia/Kolkata"
+\`\`\`
+
+This command:
+* Checks if a store configuration already exists (it is idempotent and exits early if a store is already setup).
+* Seeds the initial store settings in the stores table.
+* Provisions a default sales channel labeled online-store.
+* Activates the store operational status directly, allowing immediate checkout functionality.
+
+## 2. Database Schema Map
+
+The stores module uses five unified PostgreSQL tables to handle configurations, settings, shipping/legal origins, policies, domains, and sales channel routing:
+
+* stores: Holds single-instance shop settings (currency, support details, timezone, logo, metadata, and state flags).
+* store_addresses: Handles legal corporate details and shipping origins (including state codes and Indian GSTIN fields).
+* store_policies: Manages rich-text legal blobs (e.g., return policies, privacy policies, terms, shipping info).
+* store_domains: Registers custom customer domains, verification status, and DNS tokens.
+* channels: Declares active sales channels (e.g., Online Store, Mobile App, POS) for order routing.
+
+## 3. Store Operational States & Gating
+
+A store operates under one of four lifecycle states:
+
+* setup_pending: The default state on new installations. All public storefront and cart routes are blocked, returning 503 Service Unavailable (Store Setup Required). Admin authentication and onboarding endpoints remain open.
+* active: Fully operational. Customers can check out and place orders.
+* paused: Store is temporarily offline. Catalog remains readable, but checkouts/cart conversions are blocked with a 503 Service Unavailable (Store Paused) error.
+* suspended: Admin actions are locked out, and storefront paths return 503 Service Unavailable.
+
+This gating is enforced at the network edge by the StoreStatusMiddleware intercepting all storefront requests.
+
+## 4. Custom Domain Verification Flow
+
+Hyperrr supports custom storefront domains. To ensure proof of ownership before routing traffic, custom domains go through an asynchronous verification flow:
+
+* Register: The administrator registers a domain via POST /api/store/domains which returns a unique DNS challenge token.
+* DNS Record: The merchant creates a TXT record at their domain registrar containing this challenge token.
+* Verify: The admin triggers POST /api/store/domains/:id/verify. This pushes a VerifyDomainJob onto the background task worker queue.
+* DNS Lookup: The background job queries the domain's TXT records using trust-dns-resolver. On match, the domain state transitions to verified, enabling primary routing. Local-only domains (e.g., .test, .example, localhost) automatically bypass TXT lookups.
+
+## 5. Composition Auditing and Metadata Mixins
+
+Database tables in the store module adhere to standard auditing and metadata models by composition:
+* AuditMixin: Flattens created_at and updated_at timestamps using SQLx composition, avoiding manual field duplication.
+* MetadataMixin: Provides metadata (public-facing settings JSONB) and private_metadata (sensitive system flags JSONB). This same model is also applied to the users table, replacing the old, separate relational metafields table.`
+  }
+};
 
 export default function Guides() {
   const guideKeys = Object.keys(guides);
