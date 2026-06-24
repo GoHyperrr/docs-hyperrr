@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Route } from "./+types/api-docs";
+import openapi from "../openapi.json";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -100,416 +101,215 @@ const CodeBlock = ({ code, lang }: { code: string; lang: string }) => {
   );
 };
 
-// CLEAN SLATE DATABASE STORE: Loaded REST API specifications array
-const apis: any[] = [
-  {
-    name: "Get Store Settings",
-    method: "GET",
-    path: "/api/store",
-    description: "Retrieves the single-instance global store settings including name, tagline, currencies, locale, weight/dimension units, feature flags, and metadata. Requires settings.read permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for merchant admin authentication." },
-      { key: "Accept", val: "application/json", desc: "Response payload format." }
-    ],
-    curl: `curl -X GET http://localhost:8080/api/store \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Accept: application/json"`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    "name": "Acme Superstore",
-    "slug": "acme-superstore",
-    "tagline": "Everything you need",
-    "description": "High performance ecommerce setup",
-    "email": "contact@acme.com",
-    "phone": "+919876543210",
-    "support_email": "support@acme.com",
-    "logo_url": "https://cdn.acme.com/logo.png",
-    "favicon_url": "https://cdn.acme.com/favicon.ico",
-    "cover_image_url": "https://cdn.acme.com/cover.jpg",
-    "default_currency": "INR",
-    "timezone": "Asia/Kolkata",
-    "default_locale": "en-IN",
-    "weight_unit": "kg",
-    "dimension_unit": "cm",
-    "socials": {
-      "twitter": "https://twitter.com/acme",
-      "instagram": "https://instagram.com/acme"
-    },
-    "multi_currency_enabled": true,
-    "status": "active",
-    "metadata": {},
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:30Z"
+interface Header {
+  key: string;
+  val: string;
+  desc: string;
+}
+
+interface ApiEndpoint {
+  name: string;
+  method: string;
+  path: string;
+  description: string;
+  headers: Header[];
+  requestBody?: string;
+  curl: string;
+  response: string;
+}
+
+const resolveRef = (ref: string, spec: any): any => {
+  const parts = ref.replace("#/", "").split("/");
+  let current = spec;
+  for (const part of parts) {
+    current = current[part];
+    if (!current) return null;
   }
-}`
-  },
-  {
-    name: "Store Onboarding / First-Run",
-    method: "POST",
-    path: "/api/store",
-    description: "Runs first-time onboarding. Requires an authenticated user with settings.write permissions. If the store is already initialized, returns a 409 Conflict error. On success, sets up the store, creates a default 'online-store' sales channel, and fires onboarding verification background jobs.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "name": "Acme Superstore",
-  "slug": "acme-superstore",
-  "email": "contact@acme.com",
-  "currency": "INR",
-  "timezone": "Asia/Kolkata"
-}`,
-    curl: `curl -X POST http://localhost:8080/api/store \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Acme Superstore",
-    "slug": "acme-superstore",
-    "email": "contact@acme.com",
-    "currency": "INR",
-    "timezone": "Asia/Kolkata"
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    "name": "Acme Superstore",
-    "slug": "acme-superstore",
-    "tagline": null,
-    "description": null,
-    "email": "contact@acme.com",
-    "phone": null,
-    "support_email": null,
-    "logo_url": null,
-    "favicon_url": null,
-    "cover_image_url": null,
-    "default_currency": "INR",
-    "timezone": "Asia/Kolkata",
-    "default_locale": "en",
-    "weight_unit": "kg",
-    "dimension_unit": "cm",
-    "socials": null,
-    "multi_currency_enabled": false,
-    "status": "active",
-    "metadata": {},
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:30Z"
+  return current;
+};
+
+const getSampleValue = (propName: string, prop: any, spec: any, depth = 0): any => {
+  if (depth > 3) return {};
+  if (prop.$ref) {
+    const resolved = resolveRef(prop.$ref, spec);
+    if (!resolved) return null;
+    return generateSampleObject(resolved, spec, depth + 1);
   }
-}`
-  },
-  {
-    name: "Update Store Settings",
-    method: "PUT",
-    path: "/api/store",
-    description: "Updates existing store configurations. All parameters are optional. Enforces validation rules on default_currency (exactly 3 chars) and support emails. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "tagline": "The Ultimate Shop",
-  "description": "Premium storefront custom layout",
-  "phone": "+919876543210",
-  "support_email": "support@acme.com",
-  "logo_url": "https://cdn.acme.com/logo.png",
-  "multi_currency_enabled": true
-}`,
-    curl: `curl -X PUT http://localhost:8080/api/store \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "tagline": "The Ultimate Shop",
-    "description": "Premium storefront custom layout",
-    "phone": "+919876543210",
-    "support_email": "support@acme.com",
-    "logo_url": "https://cdn.acme.com/logo.png",
-    "multi_currency_enabled": true
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    "name": "Acme Superstore",
-    "slug": "acme-superstore",
-    "tagline": "The Ultimate Shop",
-    "description": "Premium storefront custom layout",
-    "email": "contact@acme.com",
-    "phone": "+919876543210",
-    "support_email": "support@acme.com",
-    "logo_url": "https://cdn.acme.com/logo.png",
-    "favicon_url": null,
-    "cover_image_url": null,
-    "default_currency": "INR",
-    "timezone": "Asia/Kolkata",
-    "default_locale": "en",
-    "weight_unit": "kg",
-    "dimension_unit": "cm",
-    "socials": null,
-    "multi_currency_enabled": true,
-    "status": "active",
-    "metadata": {},
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:31Z"
+  if (prop.allOf && prop.allOf[0] && prop.allOf[0].$ref) {
+    const resolved = resolveRef(prop.allOf[0].$ref, spec);
+    if (!resolved) return null;
+    return generateSampleObject(resolved, spec, depth + 1);
   }
-}`
-  },
-  {
-    name: "Update Store Status",
-    method: "PUT",
-    path: "/api/store/status",
-    description: "Updates the operational status of the store. Valid options are: 'setup_pending', 'active', 'paused', or 'suspended'. Status transitions update route gating middleware instantly. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "status": "paused"
-}`,
-    curl: `curl -X PUT http://localhost:8080/api/store/status \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"status": "paused"}'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
-    "name": "Acme Superstore",
-    "slug": "acme-superstore",
-    "status": "paused",
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:35Z"
+
+  const lowerName = propName.toLowerCase();
+  if (lowerName === "name") return "Acme Superstore";
+  if (lowerName === "slug") return "acme-superstore";
+  if (lowerName === "email" || lowerName === "support_email") return "support@acme.com";
+  if (lowerName === "currency" || lowerName === "default_currency") return "INR";
+  if (lowerName === "timezone") return "Asia/Kolkata";
+  if (lowerName === "company") return "Acme Corp Ltd";
+  if (lowerName === "address_line1") return "456 Volt Tower";
+  if (lowerName === "address_line2") return "Sector 5";
+  if (lowerName === "city") return "Mumbai";
+  if (lowerName === "state") return "Maharashtra";
+  if (lowerName === "postal_code") return "400001";
+  if (lowerName === "country_code") return "IN";
+  if (lowerName === "phone") return "+919876543210";
+  if (lowerName === "gstin") return "27AAAAA1111A1Z1";
+  if (lowerName === "status") return "active";
+  if (lowerName === "title") return "Refund Policy";
+  if (lowerName === "body") return "<h1>Refund Policy</h1><p>We offer a 30-day return policy on all unworn items.</p>";
+  if (lowerName === "domain") return "shop.mybrand.com";
+  if (lowerName === "channel_type") return "mobile_app";
+  if (lowerName === "is_active" || lowerName === "is_primary") return true;
+
+  if (prop.type === "string") {
+    if (prop.format === "uuid") return "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+    if (prop.format === "date-time") return new Date().toISOString();
+    return "string";
   }
-}`
-  },
-  {
-    name: "Upsert Store Address",
-    method: "PUT",
-    path: "/api/store/addresses/:type",
-    description: "Upserts shipping origin or corporate billing addresses. The ':type' parameter represents the address role (e.g. 'legal' or 'shipping_origin'). For Indian legal entities, the optional 'gstin' field records the Goods and Services Tax Identification Number. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "company": "Acme Corp Ltd",
-  "address_line1": "456 Volt Tower",
-  "address_line2": "Sector 5",
-  "city": "Mumbai",
-  "state": "Maharashtra",
-  "postal_code": "400001",
-  "country_code": "IN",
-  "phone": "+919876543210",
-  "gstin": "27AAAAA1111A1Z1"
-}`,
-    curl: `curl -X PUT http://localhost:8080/api/store/addresses/legal \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "company": "Acme Corp Ltd",
-    "address_line1": "456 Volt Tower",
-    "address_line2": "Sector 5",
-    "city": "Mumbai",
-    "state": "Maharashtra",
-    "postal_code": "400001",
-    "country_code": "IN",
-    "phone": "+919876543210",
-    "gstin": "27AAAAA1111A1Z1"
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "e305f699-234b-4c55-ba83-5ab7ef701ef5",
-    "address_type": "legal",
-    "company": "Acme Corp Ltd",
-    "address_line1": "456 Volt Tower",
-    "address_line2": "Sector 5",
-    "city": "Mumbai",
-    "state": "Maharashtra",
-    "postal_code": "400001",
-    "country_code": "IN",
-    "phone": "+919876543210",
-    "gstin": "27AAAAA1111A1Z1",
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:35Z"
+  if (prop.type === "boolean") return true;
+  if (prop.type === "integer" || prop.type === "number") return 123;
+  if (prop.type === "array") {
+    if (prop.items) {
+      return [getSampleValue(propName, prop.items, spec, depth + 1)];
+    }
+    return [];
   }
-}`
-  },
-  {
-    name: "Upsert Legal Policy",
-    method: "PUT",
-    path: "/api/store/policies/:type",
-    description: "Configures store policies by type. The path parameter ':type' represents policies like 'refund', 'privacy', 'terms', or 'shipping'. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "title": "Refund Policy",
-  "body": "<h1>Refund Policy</h1><p>We offer a 30-day return policy on all unworn items.</p>"
-}`,
-    curl: `curl -X PUT http://localhost:8080/api/store/policies/refund \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "title": "Refund Policy",
-    "body": "<h1>Refund Policy</h1><p>We offer a 30-day return policy on all unworn items.</p>"
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "b328a1c9-556b-4e12-bda2-ef8902cd41a1",
-    "policy_type": "refund",
-    "title": "Refund Policy",
-    "body": "<h1>Refund Policy</h1><p>We offer a 30-day return policy on all unworn items.</p>",
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:35Z"
+  if (prop.type === "object") return {};
+  return null;
+};
+
+const generateSampleObject = (schema: any, spec: any, depth = 0): any => {
+  if (!schema.properties) return {};
+  const obj: any = {};
+  for (const [key, prop] of Object.entries<any>(schema.properties)) {
+    obj[key] = getSampleValue(key, prop, spec, depth);
   }
-}`
-  },
-  {
-    name: "Register Custom Domain",
-    method: "POST",
-    path: "/api/store/domains",
-    description: "Registers a custom storefront domain and allocates a unique verification challenge TXT token. The domain stays inactive until verified. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "domain": "shop.mybrand.com",
-  "is_primary": false
-}`,
-    curl: `curl -X POST http://localhost:8080/api/store/domains \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "domain": "shop.mybrand.com",
-    "is_primary": false
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "d1c08f99-445b-4322-ba33-df5e9aa82a20",
-    "domain": "shop.mybrand.com",
-    "is_verified": false,
-    "is_primary": false,
-    "verification_token": "hyperrr-verification-token=abc123xyz456",
-    "ssl_status": "pending",
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:30Z"
-  }
-}`
-  },
-  {
-    name: "Trigger Domain Verification",
-    method: "POST",
-    path: "/api/store/domains/:id/verify",
-    description: "Triggers an asynchronous verification job for the custom domain ID. The core engine schedules a background task which queries external DNS TXT records using trust-dns-resolver to find the correct verification token. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." }
-    ],
-    curl: `curl -X POST http://localhost:8080/api/store/domains/d1c08f99-445b-4322-ba33-df5e9aa82a20/verify \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"`,
-    response: `{
-  "success": true,
-  "message": "Domain verification queued successfully"
-}`
-  },
-  {
-    name: "Set Primary Domain",
-    method: "PUT",
-    path: "/api/store/domains/:id/primary",
-    description: "Sets the target verified domain as the primary domain of the storefront. This action executes within a database transaction, atomically clearing is_primary on other domains and activating it on the target domain. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." }
-    ],
-    curl: `curl -X PUT http://localhost:8080/api/store/domains/d1c08f99-445b-4322-ba33-df5e9aa82a20/primary \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "d1c08f99-445b-4322-ba33-df5e9aa82a20",
-    "domain": "shop.mybrand.com",
-    "is_verified": true,
-    "is_primary": true,
-    "ssl_status": "active",
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:50Z"
-  }
-}`
-  },
-  {
-    name: "Create Sales Channel",
-    method: "POST",
-    path: "/api/channels",
-    description: "Registers a new merchant sales channel (e.g. online-store, mobile-app, POS) for custom inventory isolation and order routing. Requires settings.write permission.",
-    headers: [
-      { key: "Authorization", val: "Bearer <token>", desc: "JWT token for auth (requires settings.write permission)." },
-      { key: "Content-Type", val: "application/json", desc: "Request payload format." }
-    ],
-    requestBody: `{
-  "name": "Mobile Application",
-  "slug": "mobile-app",
-  "description": "Hyperrr Headless iOS & Android app sales flow",
-  "channel_type": "mobile_app",
-  "is_active": true
-}`,
-    curl: `curl -X POST http://localhost:8080/api/channels \\
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "name": "Mobile Application",
-    "slug": "mobile-app",
-    "description": "Hyperrr Headless iOS & Android app sales flow",
-    "channel_type": "mobile_app",
-    "is_active": true
-  }'`,
-    response: `{
-  "success": true,
-  "data": {
-    "id": "f5b2c7aa-bb33-4f99-a832-75d3ea2d46b0",
-    "name": "Mobile Application",
-    "slug": "mobile-app",
-    "description": "Hyperrr Headless iOS & Android app sales flow",
-    "channel_type": "mobile_app",
-    "is_active": true,
-    "created_at": "2026-06-24T14:53:30Z",
-    "updated_at": "2026-06-24T14:53:30Z"
-  }
-}`
-  },
-  {
-    name: "Get Public Storefront Info",
-    method: "GET",
-    path: "/api/storefront/info",
-    description: "Returns sanitized public brand details. Unlike /api/store, this endpoint requires zero authentication, excludes private metadata, and returns standard HTTP Cache-Control headers set to max-age=600 (10 minutes) for CDN caching.",
-    headers: [
-      { key: "Accept", val: "application/json", desc: "Response payload format." }
-    ],
-    curl: `curl -X GET http://localhost:8080/api/storefront/info \\
-  -H "Accept: application/json"`,
-    response: `{
-  "success": true,
-  "data": {
-    "name": "Acme Superstore",
-    "tagline": "The Ultimate Shop",
-    "description": "Premium storefront custom layout",
-    "logo_url": "https://cdn.acme.com/logo.png",
-    "favicon_url": "https://cdn.acme.com/favicon.ico",
-    "cover_image_url": "https://cdn.acme.com/cover.jpg",
-    "default_currency": "INR",
-    "timezone": "Asia/Kolkata",
-    "default_locale": "en",
-    "socials": {
-      "twitter": "https://twitter.com/acme",
-      "instagram": "https://instagram.com/acme"
+  return obj;
+};
+
+const getRequestJson = (requestBody: any, spec: any): string | undefined => {
+  if (requestBody && requestBody.content && requestBody.content["application/json"]) {
+    const schema = requestBody.content["application/json"].schema;
+    if (schema) {
+      let resolvedObj: any = null;
+      if (schema.$ref) {
+        const resolved = resolveRef(schema.$ref, spec);
+        if (resolved) resolvedObj = generateSampleObject(resolved, spec);
+      }
+      if (resolvedObj) {
+        return JSON.stringify(resolvedObj, null, 2);
+      }
     }
   }
-}`
+  return undefined;
+};
+
+const getResponseJson = (responses: any, spec: any): string => {
+  const okResponse = responses["200"] || responses["201"];
+  if (okResponse && okResponse.content && okResponse.content["application/json"]) {
+    const schema = okResponse.content["application/json"].schema;
+    if (schema) {
+      let resolvedObj: any = null;
+      if (schema.$ref) {
+        const resolved = resolveRef(schema.$ref, spec);
+        if (resolved) resolvedObj = generateSampleObject(resolved, spec);
+      }
+      if (resolvedObj) {
+        return JSON.stringify({ success: true, data: resolvedObj }, null, 2);
+      }
+    }
   }
-];
+  return JSON.stringify({ success: true, message: okResponse?.description || "Success" }, null, 2);
+};
+
+const generateCurl = (method: string, path: string, headers: Header[], requestBodyStr?: string): string => {
+  const formattedHeaders = headers.map(h => `-H "${h.key}: ${h.key === 'Authorization' ? 'YOUR_ADMIN_TOKEN' : h.val}"`).join(" \\\n  ");
+  const readablePath = path.replace(/\{([^}]+)\}/g, ":$1");
+  if (requestBodyStr) {
+    const singleLineBody = JSON.stringify(JSON.parse(requestBodyStr));
+    return `curl -X ${method} http://localhost:8080${readablePath} \\\n  ${formattedHeaders} \\\n  -d '${singleLineBody}'`;
+  }
+  return `curl -X ${method} http://localhost:8080${readablePath} \\\n  ${formattedHeaders}`;
+};
+
+const getHumanName = (operationId: string | undefined, method: string, path: string): string => {
+  switch (operationId) {
+    case "get_store": return "Get Store Settings";
+    case "create_store": return "Store Onboarding / First-Run";
+    case "update_store": return "Update Store Settings";
+    case "update_store_status": return "Update Store Status";
+    case "upsert_address": return "Upsert Store Address";
+    case "upsert_policy": return "Upsert Legal Policy";
+    case "add_domain": return "Register Custom Domain";
+    case "trigger_domain_verification": return "Trigger Domain Verification";
+    case "set_primary_domain": return "Set Primary Domain";
+    case "create_channel": return "Create Sales Channel";
+    case "get_storefront_info": return "Get Public Storefront Info";
+    case "health_live": return "Liveness Probe";
+    case "health_ready": return "Readiness Probe";
+    default: return operationId ? operationId.replace(/_/g, ' ') : `${method} ${path}`;
+  }
+};
+
+const buildApis = (): ApiEndpoint[] => {
+  const parsedApis: ApiEndpoint[] = [];
+  const spec = openapi as any;
+  if (!spec.paths) return [];
+
+  for (const [path, pathBlock] of Object.entries<any>(spec.paths)) {
+    for (const [method, methodBlock] of Object.entries<any>(pathBlock)) {
+      if (["get", "post", "put", "delete"].includes(method)) {
+        const reqHeaders = [
+          ...(path.startsWith("/api/storefront") || path.startsWith("/health") ? [] : [
+            { key: "Authorization", val: "Bearer <token>", desc: "JWT token for merchant admin authentication." }
+          ]),
+          { key: "Accept", val: "application/json", desc: "Response payload format." }
+        ];
+        if (method !== "get" && method !== "delete") {
+          reqHeaders.push({ key: "Content-Type", val: "application/json", desc: "Request payload format." });
+        }
+
+        const requestBody = getRequestJson(methodBlock.requestBody, spec);
+        const response = getResponseJson(methodBlock.responses, spec);
+        const curl = generateCurl(method.toUpperCase(), path, reqHeaders, requestBody);
+        const name = getHumanName(methodBlock.operationId, method.toUpperCase(), path);
+        
+        let description = methodBlock.description || "";
+        if (!description) {
+          if (path === "/api/store" && method === "get") description = "Retrieves the single-instance global store settings including name, tagline, currencies, locale, weight/dimension units, feature flags, and metadata. Requires settings.read permission.";
+          else if (path === "/api/store" && method === "post") description = "Runs first-time onboarding. Requires an authenticated user with settings.write permissions. If the store is already initialized, returns a 409 Conflict error. On success, sets up the store, creates a default 'online-store' sales channel, and fires onboarding verification background jobs.";
+          else if (path === "/api/store" && method === "put") description = "Updates existing store configurations. All parameters are optional. Enforces validation rules on default_currency (exactly 3 chars) and support emails. Requires settings.write permission.";
+          else if (path === "/api/store/status" && method === "put") description = "Updates the operational status of the store. Valid options are: 'setup_pending', 'active', 'paused', or 'suspended'. Status transitions update route gating middleware instantly. Requires settings.write permission.";
+          else if (path === "/api/store/addresses/{address_type}" && method === "put") description = "Upserts shipping origin or corporate billing addresses. The '{address_type}' parameter represents the address role (e.g. 'legal' or 'shipping_origin'). For Indian legal entities, the optional 'gstin' field records the Goods and Services Tax Identification Number. Requires settings.write permission.";
+          else if (path === "/api/store/policies/{policy_type}" && method === "put") description = "Configures store policies by type. The path parameter '{policy_type}' represents policies like 'refund', 'privacy', 'terms', or 'shipping'. Requires settings.write permission.";
+          else if (path === "/api/store/domains" && method === "post") description = "Registers a custom storefront domain and allocates a unique verification challenge TXT token. The domain stays inactive until verified. Requires settings.write permission.";
+          else if (path === "/api/store/domains/{id}/verify" && method === "post") description = "Triggers an asynchronous verification job for the custom domain ID. The core engine schedules a background task which queries external DNS TXT records using trust-dns-resolver to find the correct verification token. Requires settings.write permission.";
+          else if (path === "/api/store/domains/{id}/primary" && method === "put") description = "Sets the target verified domain as the primary domain of the storefront. This action executes within a database transaction, atomically clearing is_primary on other domains and activating it on the target domain. Requires settings.write permission.";
+          else if (path === "/api/channels" && method === "post") description = "Registers a new merchant sales channel (e.g. online-store, mobile-app, POS) for custom inventory isolation and order routing. Requires settings.write permission.";
+          else if (path === "/api/storefront/info" && method === "get") description = "Returns sanitized public brand details. Unlike /api/store, this endpoint requires zero authentication, excludes private metadata, and returns standard HTTP Cache-Control headers set to max-age=600 (10 minutes) for CDN caching.";
+          else if (path === "/health/live" && method === "get") description = "Quick systems checking endpoint confirming monolithic server liveness probe status verification.";
+          else if (path === "/health/ready" && method === "get") description = "Deep systems diagnostics health check confirming readiness of connected database, caches, and storage providers.";
+        }
+
+        parsedApis.push({
+          name,
+          method: method.toUpperCase(),
+          path: path.replace(/\{([^}]+)\}/g, ":$1"),
+          description,
+          headers: reqHeaders,
+          requestBody,
+          curl,
+          response
+        });
+      }
+    }
+  }
+  return parsedApis;
+};
+
+const apis = buildApis();
 
 export default function ApiDocs() {
   const [activeTab, setActiveTab] = useState(0);
